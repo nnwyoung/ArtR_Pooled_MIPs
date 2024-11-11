@@ -14,7 +14,6 @@ library(ggspatial)
 library(scatterpie)
 
 #Analyze All Countries Separately because some HF have the same name and combining them makes it difficult to use dplyr functions
-
 #RW####
 RW_ref <- "/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/RWAA2024/reference_AA_table.csv"
 RW_alt <-"/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/RWAA2024/alternate_AA_table.csv"
@@ -121,31 +120,45 @@ lakes10 <- ne_download(scale = "large", type = 'lakes',
 # admin10 <- ne_download(scale="large", type = "admin_1_states_provinces_lines",
 #                        category = "cultural", returnclass = "sf")
 
+admin0_rw <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/rwandaregions/rwa_adm0_2006_NISR_WGS1984_20181002.shp")
 admin10_rw <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/rwandaregions/rwa_adm1_2006_NISR_WGS1984_20181002.shp")
 admin10_tz <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/Districts/Tanzania_District_wgs84.shp")
-admin110_tz <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/Regions/Tanzania_Region_wgs84.shp")
+#admin110_tz <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/Regions/Tanzania_Region_wgs84.shp")
 admin110_cd <-st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/drcTerritory/cod_admbnda_adm2_rgc_20170711.shp")
 admin110_ug <-st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/ugTerritories/Uganda_Districts-2020---136-wgs84.shp")
 admin110_rw <-st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/rwandaregions/rwa_adm2_2006_NISR_WGS1984_20181002.shp")
 natlpark <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/EastAfricaParks.kml")
 
-##PIE CHARTING####
+pt.lim = data.frame(xlim = c(28.5, 32), ylim = c(1,-3))
+pt.bbox <- st_bbox(c(xmin=pt.lim$xlim[1],
+                     xmax=pt.lim$xlim[2],
+                     ymin=pt.lim$ylim[1],
+                     ymax=pt.lim$ylim[2]))
+sf_use_s2(FALSE)
+lakes10<- st_crop(lakes10, pt.bbox)
+rivers10 <- st_crop(rivers10, pt.bbox)
+admin110_cd <- st_crop(admin110_cd, pt.bbox)  
+admin110_ug <- st_crop(admin110_ug, pt.bbox)
+admin10_tz <- st_crop(admin10_tz, pt.bbox)
 
+##PIE CHARTING####
 
 #MAPPING base
 {
   base <- ggplot()+
+    #admin110RW off for faclab mal
     #Comment out sov110 because too many overlaps at DRC UG border and unneeded
     #geom_sf(data=sov110, color='grey80', size=20, alpha = 0.2, stroke=2.5) +
     geom_sf(data=admin10_tz, color="grey80", size= 0.6, alpha = 0.1) +
     geom_sf(data=admin110_cd, color="grey80", size= 0.6, alpha = 0.1) +
     geom_sf(data=admin110_ug, color="grey80", size= 0.6, alpha = 0.1) +
     #comment out national parks execept when graphing the health facilites and the co-occurances
-    #geom_sf(data=natlpark, color="palegreen", fill="green2", size=1,alpha =0.1) +
+    geom_sf(data=natlpark, color="palegreen", fill="green2", size=1,alpha =0.1) +
     geom_sf(data=rivers10, color="cyan4", size=0.5, alpha=0.5) +
-    geom_sf(data=admin110_rw, color="grey60", size= 0.6, alpha = 0.1) +
+    #geom_sf(data=admin110_rw, color="grey60", size= 0.6, alpha = 0.1) +
+    geom_sf(data=admin10_rw, color="grey30", size= 0.6, alpha = 0.1) +
     geom_sf(data=lakes10, color="grey40", fill ="lightblue", size= 0.8) +
-    geom_sf(data=admin10_rw, color= "black", size=0.6, alpha=0.1)+
+    geom_sf(data=admin0_rw, color= "black", size=0.6, linewidth =0.5, alpha=0.1)+
     annotation_scale(location = "bl", width_hint = 0.5) +
     annotation_north_arrow(location = "bl", which_north = "true",
                            pad_x = unit(0.01, "in"), pad_y = unit(0.18, "in"),
@@ -158,6 +171,27 @@ natlpark <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/EastAfr
              color="grey60", size=6 , fontface="italic") +
     annotate("text", x = 30.8, y = -1.3, label = "Tanzania",
              color="grey60", size=6, fontface="italic")
+}
+{
+  facilities <- base + 
+    annotate("text", x = 29.7, y = -1.8, label = "Rwanda", 
+             color="grey60", size=5 , fontface="italic") +
+    geom_point(data = health_facilities, aes(x = lon, y = lat), size = 1.5,
+             shape = 21, color= "grey40", fill = "cyan2", stroke = 1,
+             alpha =0.8) +
+    geom_text_repel(data = health_facilities, aes(x =lon, y= lat+.035, label = Health_Facilities),
+                    point.size = NA,
+                    size = 4,
+                    color="grey20", fontface="bold",min.segment.length = 0.22, max.overlaps = 10) +
+    #coord_sf(xlim = c(28.6, 31.6), ylim = c(0.3,-2.8), expand = TRUE) +
+    #UG 2024 map coord_sf(xlim = c(29, 31.8), ylim = c(0,-2), expand = TRUE) +
+    coord_sf(xlim = c(28.9, 30.85), ylim = c(-1.11,-2.81), expand = TRUE) +
+    theme_void()+
+    theme(legend.title=element_blank())+
+    theme(legend.text=element_text(size=12))
+  
+  facilities
+  ggsave("/media/nwernsma/ShareVolume/GEM_Rwanda_Mapping/facilities_mapped.svg", facilities, dpi=600, width=10, height=8.8)
 }
 
 #kelchpie Calculation
@@ -180,7 +214,6 @@ kelchpie$radius <- (rescale(kelchpie$R561H, to = c(3.01,3.0))/60)
 write.csv(kelchpie,"/home/nwernsma/Documents/kelchpiewithRad.csv")
 newkelchcsv<- read.csv("/home/nwernsma/Documents/kelchpiewithRad.csv")
 }
-
 #combined k13 pie simple
 {
   #adjust the tanzania label in base MAP above when charted expanded points**
@@ -201,19 +234,51 @@ newkelchcsv<- read.csv("/home/nwernsma/Documents/kelchpiewithRad.csv")
     #expanded coordinate set
     coord_sf(xlim = c(28.9, 31.3), ylim = c(0.1,-2.8), expand = TRUE) +
     theme_void()+
-    theme(legend.position = "none")
+    # theme(legend.position = "none")
   #swap in once to get legend elements
-  # theme(legend.title=element_blank())+
-  # theme(legend.text=element_text(size=11), 
-  #       legend.position = c(.95,0),
-  #       legend.justification = c("right", "bottom"), 
-  #       legend.margin = margin(1,2,2,2),
-  #       legend.box.background = element_rect(fill="white"))
+    theme(legend.title=element_blank())+
+    theme(legend.text=element_text(size=11),
+          legend.position = c(.95,0),
+          legend.justification = c("right", "bottom"),
+          legend.margin = margin(1,2,2,2),
+          legend.box.background = element_rect(fill="white"))
   
   multipie
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240322kelchCombinedPiesExpandedRepel.pdf",multipie, dpi=600, width=11.52, height=8.802)
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240322kelchCombinedPiesExpandedRepel.jpg",multipie, dpi=600, width=11.5, height=8.8)
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240322kelchCombinedPiesExpandedRepel.svg",multipie, dpi=600, width=11.5, height=8.8)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240423kelchCombinedPiesExpandedRepelBBOX.pdf",multipie, dpi=600, width=11.5, height=8.8)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240423kelchCombinedPiesExpandedRepelBBOX.jpg",multipie, dpi=600, width=11.5, height=8.8)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240423kelchCombinedPiesExpandedRepelBBOX.svg",multipie, dpi=600, width=11.5, height=8.8)
+}
+{#DRC border
+  
+  multipie <-  ggplot() +
+    geom_sf(data=admin10_tz, color="grey80", size= 0.6, alpha = 0.1) +
+    geom_sf(data=admin110_cd, color="grey80", size= 0.6, alpha = 0.1) +
+    geom_sf(data=admin110_ug, color="grey80", size= 0.6, alpha = 0.1) +
+    geom_sf(data=rivers10, color="cyan4", size=0.5, alpha=0.5) +
+    geom_sf(data=admin110_rw, color="grey60", size= 0.6, alpha = 0.1) +
+    geom_sf(data=admin10_rw, color="grey60", size= 0.6, alpha = 0.1) +
+    geom_sf(data=lakes10, color="grey40", fill ="lightblue", size= 0.8) +
+    geom_sf(data=admin0_rw, color= "black", size=0.6, linewidth =.6,alpha=0.1)+
+    #annotate("text", x = 29.2, y = -1.4, label = "DRC", 
+    #         color="grey60", size=6 , fontface="italic") +
+    #annotate("text", x = 29.45, y = -1.75, label = "Rwanda", 
+    #         color="grey60", size=6 , fontface="italic") +
+    geom_scatterpie(aes(x=lon, y=lat, r=radius), 
+                    data = newkelchcsv,
+                    cols = c("R561H","A675V","G449A","P441L","C469F","WT"), 
+                    sorted_by_radius = TRUE,
+                    color = "grey20",
+                    alpha=.8)+
+    scale_fill_manual(values = colorsline)+
+    #DRC border
+    coord_sf(xlim = c(28.97, 29.50), ylim = c(-1.45,-2.1), expand = TRUE) +
+    theme_void()+
+    theme(legend.position = "none")
+
+  multipie
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240423kelchDRCBordSM.pdf",multipie, dpi=600, width=2, height=3)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240423kelchDRCBordSM.jpg",multipie, dpi=600, width=2, height=3)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240423kelchDRCBordSMallFresh.svg",multipie, dpi=600, width=2, height=3)
 }
 
 #justR561H
@@ -239,7 +304,6 @@ R561Hsmall <- R561H +
   coord_sf(xlim = c(29.9, 30.4), ylim = c(-1.6,-2.3), expand = TRUE)
 ggsave("/home/nwernsma/Documents/230419RWMaps/561Hpiesinset.png", R561Hsmall, dpi=600, width=7, height=5)
 }
-
 #675 & 561H border transmission
 {#original HC locations
 health_facilities <- read.csv("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/NWYMappingDemoFiles/dataRW23F_fac.csv")
@@ -288,9 +352,7 @@ k13Cooccur <- k13Cooccur %>% mutate(mutants = if_else((cand >0 & valid >0),"Vali
 k13Cooccur <- left_join(k13Cooccur,full_join(coordRW,full_join(coordDRC, full_join(coordTZ,coordUG)))) %>% mutate(total = valid+cand) %>% arrange(mutants)
 k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate","Validated Only","None"))
 }
-
 #VennDiagramCoOccur
-
 #mapping CoOccur
 {
   shapes = c(15,0,1)
@@ -308,16 +370,16 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
     # theme(legend.text=element_text(size=12))
     theme(legend.text=element_text(size=11),
           legend.title.align = 0.5,
-          legend.position = c(.95,.03),
+          legend.position = c(.98,0.02),
           legend.justification = c("right", "bottom"),
-          legend.margin = margin(1,2,2,2),
+          legend.margin = margin(1,1,1,1),
           legend.box.background = element_rect(fill="white"))
   
   CoOccur
   
   ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/coOccur.pdf", CoOccur, dpi=600, width=6.34, height=7.64)
   ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/coOccur.jpg", CoOccur, dpi=600, width=6.34, height=7.64)
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/coOccur.svg", CoOccur, dpi=600, width=6.34, height=7.64)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/coOccurJIDImage.svg", CoOccur, dpi=600, width=6.34, height=7.64)
 }
 
 #mdr1 pie calculations
@@ -326,8 +388,6 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
     mutate(WT=100-Y184F)
 
   mdr1pie$radius <- (rescale(mdr1pie$Y184F, to = c(3.01,3.0))/60)
-  #0.0505
-  
 }
 #mdr1 184
 {
@@ -339,25 +399,93 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
                     color = "grey20",
                     legend_name = "Pfkelch13",
                     alpha=.8)+
-    scale_fill_manual(values = c("grey80","royalblue2")) +
+    scale_fill_manual(values = c("grey80","lightgoldenrod2"), name="mdr1") +
     #central
     #coord_sf(xlim = c(28.8, 31), ylim = c(-1.08,-2.85), expand = TRUE) +
     #expanded
     coord_sf(xlim = c(28.9, 31.3), ylim = c(0.1,-2.8), expand = TRUE) +
     theme_void()+
-    theme(legend.position = "none")
-    # theme(legend.title=element_blank())+
-    # theme(legend.text=element_text(size=11),
-    #   legend.position = c(.95,0.05),
-    #   legend.justification = c("right", "bottom"),
-    #   legend.margin = margin(1,2,2,2),
-    #   legend.box.background = element_rect(fill="white"))
-
+    #theme(legend.position = "none")
+    theme(legend.title=element_blank())+
+    theme(legend.text=element_text(size=11),
+          legend.position = c(.98,0.02),
+          legend.justification = c("right", "bottom"),
+          legend.margin = margin(1,2,2,2),
+          legend.box.background = element_rect(fill="white"))
+  
   mdr184
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/mdr184Expandedpie240322.pdf", mdr184, dpi=600, width=11.5, height=8.8)
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/mdr184Expandedpie240322.jpg", mdr184, dpi=600, width=11.5, height=8.8)
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/mdr184Expandedpie240322.svg", mdr184, dpi=600, width=11.5, height=8.8)
- }
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/JID_Review_Edits/mdr1_184Pie240820.svg", mdr184, dpi=600, width=11.5, height=8.8)
+}
+
+#mdr1 N86Y 
+{
+  mdr1_86pie <- filter(DRmutations,grepl("86",mutation_name)) %>% select(-number) %>% spread(mutation_name, sitefreqWholeNum) %>% rename("N86Y" = "mdr1-Asn86Tyr") %>%
+    mutate(WT= 100-N86Y)
+  mdr1_86pie$radius <- (rescale(mdr1_86pie$N86Y,to=c(3.01,3.0))/60)
+}
+#mdr1 86
+{
+  mdr1_86 <- base +
+    geom_scatterpie(aes(x=lon, y=lat, r = radius),
+                    data = mdr1_86pie,
+                    cols = c("N86Y", "WT"),
+                    sorted_by_radius= TRUE,
+                    color = "grey20",
+                    legend_name = "Pfkelch13",
+                    alpha=.8)+
+    scale_fill_manual(values = c("grey80","dodgerblue"), name="mdr1") +
+    #central
+    #coord_sf(xlim = c(28.8, 31), ylim = c(-1.08,-2.85), expand = TRUE) +
+    #expanded
+    coord_sf(xlim = c(28.9, 31.3), ylim = c(0.1,-2.8), expand = TRUE) +
+    theme_void()+
+    #theme(legend.position = "none")
+    theme(legend.title=element_blank())+
+    theme(legend.text=element_text(size=11),
+          legend.position = c(.98,0.02),
+          legend.justification = c("right", "bottom"),
+          legend.margin = margin(1,2,2,2),
+          legend.box.background = element_rect(fill="white"))
+  
+  mdr1_86
+  #ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/mdr184Expandedpie240327.pdf", mdr184, dpi=600, width=11.5, height=8.8)
+  #ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/mdr184Expandedpie240327.jpg", mdr184, dpi=600, width=11.5, height=8.8)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/JID_Review_Edits/mdr1_86Expandedpie240814.svg", mdr1_86, dpi=600, width=11.5, height=8.8)
+}
+
+#mdr1 1246
+{
+  mdr1_1246pie <- filter(DRmutations,grepl("1246",mutation_name)) %>% select(-number) %>% spread(mutation_name, sitefreqWholeNum) %>% rename("D1246Y" = "mdr1-Asp1246Tyr") %>%
+    mutate(WT= 100-D1246Y)
+  mdr1_1246pie$radius <- (rescale(mdr1_1246pie$D1246Y,to=c(3.01,3.0))/60)
+}
+#mdr1 1246
+{
+  mdr1246 <- base +
+    geom_scatterpie(aes(x=lon, y=lat, r = radius),
+                    data = mdr1_1246pie,
+                    cols = c("D1246Y", "WT"),
+                    sorted_by_radius= TRUE,
+                    color = "grey20",
+                    legend_name = "Pfkelch13",
+                    alpha=.8)+
+    scale_fill_manual(values = c("grey80","palevioletred1"), name="mdr1") +
+    #central
+    #coord_sf(xlim = c(28.8, 31), ylim = c(-1.08,-2.85), expand = TRUE) +
+    #expanded
+    coord_sf(xlim = c(28.9, 31.3), ylim = c(0.1,-2.8), expand = TRUE) +
+    theme_void()+
+    #theme(legend.position = "none")
+    theme(legend.title=element_blank())+
+    theme(legend.text=element_text(size=11),
+          legend.position = c(.98,0.02),
+          legend.justification = c("right", "bottom"),
+          legend.margin = margin(1,2,2,2),
+          legend.box.background = element_rect(fill="white"))
+  
+  mdr1246
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/JID_Review_Edits/mdr1_1246Pie240820.svg", mdr1246, dpi=600, width=11.5, height=8.8)
+}
 
 #crt pie calculations
 {
@@ -381,18 +509,18 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
     #expanded
     coord_sf(xlim = c(28.9, 31.3), ylim = c(0.1,-2.8), expand = TRUE) +
     theme_void()+
-    theme(legend.position = "none")
-    # theme(legend.title=element_blank())+
-    # theme(legend.text=element_text(size=11),
-    #     legend.position = c(.95,0.05),
-    #     legend.justification = c("right", "bottom"),
-    #     legend.margin = margin(1,2,2,2),
-    #     legend.box.background = element_rect(fill="white"))
+    #theme(legend.position = "none")
+    theme(legend.title=element_blank())+
+    theme(legend.text=element_text(size=11),
+        legend.position = c(.98,0.02),
+        legend.justification = c("right", "bottom"),
+        legend.margin = margin(1,2,2,2),
+        legend.box.background = element_rect(fill="white"))
 
   crt76
   ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/crt76Expandedpie240322.pdf", crt76, dpi=600, width=11.5, height=8.8)
   ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/crt76Expandedpie240322.jpg", crt76, dpi=600, width=11.5, height=8.8)
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/crt76Expandedpie240322.svg", crt76, dpi=600, width=11.5, height=8.8)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/crt76Expandedpie240430.svg", crt76, dpi=600, width=11.5, height=8.8)
 }
 
 #dhpspie
@@ -429,10 +557,10 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
   allthree <- filter(combineddhpsPie, A437G >0) %>% select(-c(chart581,chart540)) %>% rename(K540E = real540)
   justtwo <- filter(combineddhpsPie,A437G==0) %>% select(-c(real540,A581G)) %>% rename(K540E = chart540)%>% rename(A581G =chart581)
   
-  finaldhpsdata <- bind_rows(allthree,justtwo)
+  finaldhpsdata <- bind_rows(allthree,justtwo) 
+  avg581 <- finaldhpsdata %>% filter(grepl("Rwanda",country)) %>% summarise(mean(A581G)) #in discussion
   finaldhpsdata$radius <- 0.0505
 }
-
 #dhps combined pie chart
 {
   colorsline<- c("springgreen3","slateblue1","chocolate1","grey80")
@@ -458,8 +586,7 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
   #     legend.margin = margin(1,2,2,2),
   #     legend.box.background = element_rect(fill="white"))
   multipie
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240216dhpsExpandedPiesCentralRepel.pdf",multipie, dpi=600, width=11.52, height=8.802)
-  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240216dhpsExpandedPiesCentralRepel.jpg",multipie, dpi=600, width=11.5, height=8.8)
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/JID_Review_Edits/dhpsTriple240819.svg", multipie, dpi=600, width=11.5, height=8.8)
 }
 
 #dhfr pie 
@@ -473,20 +600,52 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
   dhfr51 <- dhfr51 %>% select(name,N51I)
   dhfr59 <- dhfr59 %>% select(name,C59R)
   combineddhfrPie <- left_join(dhfr164,left_join(dhfr59,left_join(dhfr51,dhfr108))) %>% mutate(WT108 = 100-S108N) %>% mutate(MTratio = (C59R/I164L)+1)%>% mutate(chart164 = S108N/MTratio) %>% mutate(chart59 = S108N - chart164)%>%mutate(real59 = C59R - I164L) %>% mutate(totalMT = real59+I164L)%>% mutate(pietotal=WT108+totalMT) %>% mutate(wedge108 = 100-pietotal)
-  combineddhfrPiealt <- left_join(dhfr164,left_join(dhfr59,left_join(dhfr51,dhfr108))) %>% mutate(WT51 = 100-N51I) %>% mutate(MTratio = (C59R/I164L)+1)%>% mutate(chart164 = N51I/MTratio) %>% mutate(chart59 = N51I - chart164)%>%mutate(real59 = C59R - I164L) %>% mutate(totalMT = real59+I164L)%>% mutate(pietotal=WT51+totalMT) %>% mutate(wedge51 = 100-pietotal)
+  combineddhfrPiealt <- left_join(dhfr164,left_join(dhfr59,left_join(dhfr51,dhfr108))) %>% mutate(WT51 = 100-N51I) %>% 
+    mutate(MTratio = (C59R/I164L)+1)%>% 
+    mutate(chart164 = N51I/MTratio) %>% 
+    mutate(chart59 = N51I - chart164)%>%
+    mutate(real59 = C59R - I164L) %>% 
+    mutate(totalMT = real59+I164L)%>% 
+    mutate(pietotal=WT51+totalMT) %>% 
+    mutate(wedge51 = 100-pietotal)
   combineddhfrPiealt$wedge51[combineddhfrPiealt$wedge51<0] <- 0
   combineddhfrPiealt <- select(combineddhfrPiealt,-c(pietotal,N51I,totalMT,MTratio,C59R)) %>% rename(WT=WT51) %>% rename(N51I = wedge51)
-  
-  #combineddhpsPie <- mutate(combineddhpsPie, pietotal = ifelse(wedge437 > 0,wedge437+A581G+WT437+real540,wedge437+WT437+chart581+chart540))
-  
   allthree <- filter(combineddhfrPiealt, N51I >0) %>% select(-c(chart59,chart164)) %>% rename(C59R = real59)
   justtwo <- filter(combineddhfrPiealt,N51I==0) %>% select(-c(real59,I164L)) %>% rename(C59R = chart59)%>% rename(I164L =chart164)
+  
+  
+  #Triplemutant finding only not GREAT
+  tripledhfrPiealt <- left_join(dhfr164,left_join(dhfr59,left_join(dhfr51,dhfr108))) %>% mutate(WT108 = 100-S108N) %>% 
+    mutate(MTratio = (N51I/C59R)+1)%>% 
+    mutate(chart59 = S108N/MTratio) %>% 
+    mutate(chart51 = S108N - chart59)%>%
+    mutate(real51 = N51I - C59R) %>% 
+    mutate(totalMT = real51+C59R)%>% 
+    mutate(pietotal=WT108+totalMT) %>% 
+    mutate(wedge108 = 100-pietotal)
+  tripledhfrPiealt$wedge108[tripledhfrPiealt$wedge108<0] <- 0
+  tripledhfrPiealt <- select(tripledhfrPiealt,-c(pietotal,S108N,totalMT,MTratio,N51I)) %>% rename(WT=WT108) %>% rename(S108N = wedge108)
+  allthree <- filter(tripledhfrPiealt, S108N >0) %>% select(-c(chart51,chart59)) %>% rename(N51I = real51)
+  justtwo <- filter(tripledhfrPiealt,S108N==0) %>% select(-c(real51,C59R)) %>% rename(N51I =chart51)%>% rename(C59R = chart59)
+  DHFRforquad <- bind_rows(allthree,justtwo)
+  #combineddhpsPie <- mutate(combineddhpsPie, pietotal = ifelse(wedge437 > 0,wedge437+A581G+WT437+real540,wedge437+WT437+chart581+chart540))
+  
+  #consolidating to a triplicate then finding ratio of triple to quad mutant
+  tripledhfrPiealt <- left_join(dhfr164,left_join(dhfr59,left_join(dhfr51,dhfr108))) %>% mutate(triple = C59R+S108N+N51I) %>% mutate(tripleMTavg = (triple/300)*100) %>%
+    mutate(WT=100-tripleMTavg) %>%
+    mutate(quadRatio = I164L/tripleMTavg) %>%
+    mutate(quadscaled = (quadRatio*tripleMTavg)/100) %>%
+    mutate(chart164 = quadscaled*tripleMTavg) %>%
+    mutate(chartTriple = tripleMTavg-chart164) %>%
+    mutate(totalpie = chart164+WT+chartTriple) %>%
+    select(-c(I164L,C59R,S108N,N51I,triple,tripleMTavg,quadRatio,quadscaled)) %>% rename(I164L = chart164) %>% rename(C59Rtrip =chartTriple)
+  finaldhfrdata <- tripledhfrPiealt
+  
   
   finaldhfrdata <- bind_rows(allthree,justtwo)
   finaldhfrdata$radius <- 0.0505
 }
-
-#Imputed dhfr164
+#Imputed dhfr164 as 164, 59 and 51
 {
   colorsline<- c("brown2","forestgreen","gold1","grey80")
   colorsline<- setNames(colorsline,c("I164L","C59R","N51I","WT"))
@@ -515,5 +674,34 @@ k13Cooccur$mutants <- factor(k13Cooccur$mutants, levels= c("Validated&Candidate"
   multipie
   ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240228dhfrPiesRepel.pdf",multipie, dpi=600, width=11.52, height=8.802)
   ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/24FebManuscript/240228dhfrPiesRepel.jpg",multipie, dpi=600, width=11.5, height=8.8)
+}
+#Imputed dhfr164 as tripleMT AVG
+{
+  colorsline<- c("brown2","forestgreen","grey80")
+  colorsline<- setNames(colorsline,c("I164L","C59Rtrip","WT"))
+  
+  multipie <- base +
+    geom_scatterpie(aes(x=lon, y=lat, r=radius), 
+                    data = finaldhfrdata,
+                    cols = c("I164L","C59Rtrip","WT"), 
+                    sorted_by_radius = TRUE,
+                    color = "grey20",
+                    alpha=.8)+
+    scale_fill_manual(values = colorsline)+
+    #expanded
+    coord_sf(xlim = c(28.9, 31.3), ylim = c(0.1,-2.8), expand = TRUE) +
+    theme_void()+
+    #theme(legend.position = "none")
+    #swap in once to get legend elements
+    theme(legend.title=element_blank())+
+    #labs(fill="dhfr")+
+    theme(legend.text=element_text(size=11),
+          legend.title.align = 0.5,
+          legend.position = c(.95,0.05),
+          legend.justification = c("right", "bottom"),
+          legend.margin = margin(1,2,2,2),
+          legend.box.background = element_rect(fill="white"))
+  multipie
+  ggsave("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/JID_Review_Edits/dhfrTripleQuadNoInkscape240809.svg", multipie, dpi=600, width=11.5, height=8.8)
 }
 
