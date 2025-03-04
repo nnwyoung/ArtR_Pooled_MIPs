@@ -129,6 +129,10 @@ admin110_ug <-st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/ugTer
 admin110_rw <-st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/rwandaregions/rwa_adm2_2006_NISR_WGS1984_20181002.shp")
 natlpark <- st_read("/home/nwernsma/Documents/FinalArtR22RWPoolsAnalysis/EastAfricaParks.kml")
 
+#If Geodetic CRS:  WGS 84 does not autoset when loading the shapefiles above you can use the sf_set_crs(4326) 
+admin110_rw  <- admin110_rw %>% st_set_crs(4326)
+admin10_rw <- admin10_rw %>% st_set_crs(4326)
+
 pt.lim = data.frame(xlim = c(28.5, 32), ylim = c(1,-3))
 pt.bbox <- st_bbox(c(xmin=pt.lim$xlim[1],
                      xmax=pt.lim$xlim[2],
